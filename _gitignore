@@ -1,0 +1,7 @@
+cred.txt
+*__pycache__/
+watson/__pycache__/
+*.py[cod]
+results.json
+test.py
+secrets/*
