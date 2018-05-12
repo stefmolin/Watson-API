@@ -1,5 +1,6 @@
 # Watson API
-The Watson API runs queries in the background using Celery.
+The Watson API runs queries in the background using Celery. This is the non-dockerized version.
+The master branch will contain the maintained dockerized version. 
 
 ## How It Works
 Those wishing to add queries to the API simply need to add a SQL file (file
