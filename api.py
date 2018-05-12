@@ -1,5 +1,7 @@
 from flask import Flask, jsonify, request, Response, Blueprint, url_for
 from flask_api import status
+from celery.result import AsyncResult
+from watson.celery import celery
 from watson import tasks, utils
 import logging
 import os
@@ -16,12 +18,6 @@ api_version = 'v1'
 api = Blueprint(api_version, __name__)
 
 app = Flask(__name__)
-# rabbit_mq_user = os.environ['RABBITMQ_USER']
-# rabbit_mq_pass = os.environ['RABBITMQ_PASS']
-# app.config['CELERY_BROKER_URL'] = 'amqp://{username}:{password}@localhost:5672//'\
-#                                   .format(username=rabbit_mq_user, password=rabbit_mq_pass)
-# app.config['CELERY_RESULT_BACKEND'] = 'rpc://'
-# tasks.celery.conf.update(app.config)
 
 def run_query_in_background():
     logger.debug('Generating unique ID for request...')
@@ -53,6 +49,7 @@ def run_query_in_background():
 
     logger.debug('Locating the query...')
     sql_query = utils.read_query_from_file(sql_query_file)
+    current_task = None
     if not tasks.find_result(result_id):
         # this has not already been queried for so return the url
         try:
@@ -60,16 +57,21 @@ def run_query_in_background():
             logger.debug('Successfully replaced parameters in query.')
         except KeyError:
             logger.info('User attempting to query resource without required parameters; terminating request.')
-            return jsonify({'error' : 'query_error',
-                            'query' : sql_query,
-                            'required_parameters' : [re.sub('[\{\}]', '', missing_arg)
-                                                    for missing_arg in re.findall('\\{.*?\\}', sql_query)],
-                            'provided_parameters' : request.args,
-                            'message' : 'Not all required parameters for the query were provided in the request.'}), status.HTTP_400_BAD_REQUEST
+            return api_response({'error' : 'query_error',
+                                'query' : sql_query,
+                                'required_parameters' : [re.sub('[\{\}]', '', missing_arg)
+                                                        for missing_arg in re.findall('\\{.*?\\}', sql_query)],
+                                'provided_parameters' : request.args,
+                                'message' : 'Not all required parameters for the query were provided in the request.'},
+                                status.HTTP_400_BAD_REQUEST)
         logger.info("Running query with celery, since we don't have the result already")
-        tasks.simple_query.delay(query=sql_query, result_id=result_id)
-    return jsonify({'request' : sql_query,
-                    'result': url_for('v1.get_results', result_id=result_id, _external=True)}), status.HTTP_202_ACCEPTED
+        current_task = tasks.simple_query.delay(query=sql_query, result_id=result_id)
+    return api_response({'request' : sql_query,
+                        'result': url_for('v1.get_results', result_id=result_id, _external=True),
+                        'current_status' : current_task.status if current_task else 'none',
+                        'task_id' : current_task.task_id if current_task else 'none',
+                        'check_status' : url_for('v1.check_status', task_id=current_task.task_id, _external=True) if current_task else 'none'},
+                        status.HTTP_202_ACCEPTED)
 
 # create endpoints for all the queries
 for query in utils.get_query_files('queries'):
@@ -78,27 +80,29 @@ for query in utils.get_query_files('queries'):
                      view_func=run_query_in_background,
                      methods=['POST'])
 
-@api.route('/test')
-def test():
-    if request.args:
-        # the query has parameters that need to be replaced
-        id_elements = [request.args.get(key) for key in sorted(request.args.keys())]
-    else:
-        # the query will run without filling in parameters so ID will just be the query name (added later)
-        id_elements = []
-    id_elements.append('sample_query.sql')
-    result_id = utils.generate_uuid(id_elements)
-    return jsonify({'args' : request.args, 'request_id' : result_id, 'elements' : id_elements})
-
 @api.route('/get_results/<result_id>', methods=['GET'])
 def get_results(result_id): # this will be the only endpoint for geting the results
     logger.info("Getting query results")
     result = tasks.find_result(result_id)
     if result:
         # data is ready, return it
-        return jsonify(result), status.HTTP_200_OK
+        return api_response(result, status.HTTP_200_OK)
     else:
-        return jsonify({'results' : 'pending'}), status.HTTP_202_ACCEPTED
+        return api_response({'results' : 'pending'}, status.HTTP_204_NO_CONTENT)
+
+@api.route('/check_status/<task_id>', methods=['GET'])
+def check_status(task_id):
+    logger.info("Checking the status of task.")
+    task = AsyncResult(task_id, app=celery)
+    if task:
+        # task found return status
+        return api_response({'task_id' : task_id,
+                            'current_status' : task.status,
+                            'successful' : task.successful()}, status.HTTP_200_OK)
+    else:
+        return api_response({'task_id' : task_id,
+                            'current_status' : 'No such task exists',
+                            'successful' : False}, status.HTTP_200_OK)
 
 # this must come after defining the blueprint entirely
 app.register_blueprint(api, url_prefix='/api/' + api_version)
@@ -124,5 +128,9 @@ def internal_server_error(e):
             'message': "Oops. Something went very wrong."}
     return api_response(data, error_code=500)
 
+@app.route('/healthcheck')
+def healthcheck():
+    return '', status.HTTP_200_OK
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

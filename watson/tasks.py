@@ -1,15 +1,14 @@
-# must use celery 3.1.24 on windows!
 from __future__ import absolute_import, unicode_literals
 from pymongo import MongoClient
 from watson import utils
-from watson.celery_app import celery
+from watson.celery import celery
 
 import logging
 FORMAT = '[%(levelname)s] [ %(name)s ] %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 logger = logging.getLogger('Celery')
 
-client = MongoClient('localhost', 27017)
+client = MongoClient('storage.watson_api', 27017)
 db = client.data
 collection = db.results
 
@@ -24,10 +23,14 @@ def simple_query(query, result_id):
     logger.debug('Just finished querying database, results: ')
     results = utils.tag_query_results(results, result_id)
     logger.debug(results)
-    logger.debug('Writing result to the database...')
-    result_id = collection.insert_one(results)
-    logger.debug(result_id)
-    return 'Done'
+    if results:
+        logger.debug('Writing result to the database...')
+        result_id = collection.insert_one(results)
+        logger.debug(result_id)
+        return 'Success!'
+    else:
+        logger.debug('Attempt to query was unsuccessful.')
+        return 'Failure'
 
 @celery.task
 def find_result(uuid):

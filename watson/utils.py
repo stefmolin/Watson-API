@@ -30,31 +30,28 @@ def get_query_files(dir):
         if level == 0:
             file_paths.extend([file for file in filenames if '.sql' in file])
         else:
-            # note that for linux '\\' will need to be changed to '/'
-            file_paths.extend([join(dirpath.split(dir + '\\')[1], file).replace('\\', '/') for file in filenames if '.sql' in file])
+             file_paths.extend([join(dirpath.split(dir + '/')[1], file) for file in filenames if '.sql' in file])
         level += 1
     return file_paths
 
 def query_vertica(query):
-    with open('secrets/cred.txt', 'r') as file:
+    with open('/run/secrets/fernet_key', 'r') as file:
         password = file.read().split("\n")[0]
-    db_uri = 'vertica+vertica_python://{username}:{password}@<hostname>:<port>/<db>?ConnectionLoadBalance=true'\
+    db_uri = 'vertica+vertica_python://{username}:{password}@[HOSTNAME]:[PORT]/[DB]?ConnectionLoadBalance=true'\
              .format(username='s.molin', password=password)
     engine = create_engine(db_uri, echo=False)
     try:
         results = engine.execute(query).fetchall()
         results = [dict(row) for row in results]
+        # convert dates to datetime to avoid MongoDB error from dates without times
+        for row in results:
+            for key, value in row.items():
+                if isinstance(value, datetime.date):
+                    # row[key] = datetime.datetime.combine(value, datetime.time.min) # use this to record dates as datetimes
+                    row[key] = str(value) # record dates as strings in format 'YYYY-MM-DD' ('%Y-%m-%d')
     except ProgrammingError as e:
         results = {'error' : e.orig.__str__(),
                    'message' : 'The query you provided is invalid. Try running it against the database yourself to see the error.'}
     finally:
         engine.dispose
     return results
-
-# this may not be necessary
-def alchemy_encoder(obj):
-    """JSON encoder function for SQLAlchemy special classes."""
-    if isinstance(obj, datetime.date):
-        return obj.isoformat()
-    elif isinstance(obj, decimal.Decimal):
-        return float(obj)
