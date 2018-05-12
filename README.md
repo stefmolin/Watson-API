@@ -17,8 +17,8 @@ where replacing them with the value would yield a valid SQL query. Then to run
 your query, simply add all your query parameters as a query string to your request.
 For example, if the query needs `start_date` and `end_date` include something like
 `date BETWEEN {start_date} AND {end_date}` in your query and make your `POST` request like
-`curl -i -X POST [hostname]/api/v1/query/sherlock/sample_query?start_date=2015-09-28&end_date=2018-06-08`
-(Easter egg). Your query will then be properly parameterized!
+`curl -i -X POST [hostname]/api/v1/query/sherlock/sample_query?start_date=2015-09-28&end_date=2018-06-08`.
+Your query will then be properly parameterized!
 
 Note that should you forget the query parameters or misspell them, you will
 receive a response with the query showing its parameters and the parameters you
@@ -31,7 +31,11 @@ Query results will be automatically removed 24 hours after their creation.
 Note that this has been built for small queries. Issues may arise with queries that have large outputs.
 
 ## Requirements
-Python 3, Flask, Celery, RabbitMQ, MongoDB, SQLAlchemy, PyMongo
+Python 3, Flask, Celery, RabbitMQ, MongoDB, SQLAlchemy, PyMongo, Docker
+
+## Docker Images Used
+- MongoDB: `FROM mongo:3.6.3-jessie`
+- RabbitMQ: `FROM rabbitmq:3.7.4-management-alpine`
 
 ## Author
 Stefanie Molin
