@@ -1,0 +1,77 @@
+version: "3.3"
+services:
+    api:
+        image: watson_api_api
+        ports:
+          - "53865:80"
+        build:
+            context: .
+        environment:
+            DEPLOYMENT_ENVIRONMENT: production
+            RABBITMQ_USER: watson
+            RABBITMQ_PASS: clue
+        healthcheck:
+            test: curl -f localhost/healthcheck || exit 1
+            interval: 30s
+            timeout: 3s
+            retries: 2
+        networks:
+            watson_api:
+            frontend:
+                aliases:
+                    - api.watson_api
+        secrets:
+            - fernet_key
+    storage:
+        image: watson_api_storage
+        build:
+            context: [git_repo_url]/mongodb.git#master
+        networks:
+            watson_api:
+                aliases:
+                    - storage.watson_api
+        # volumes:
+            # - watson_api_storage:/data/db
+    rabbitmq:
+        image: watson_api_rabbitmq
+        build:
+            context: [git_repo_url]/rabbitmq.git#master
+        environment:
+            DEPLOYMENT_ENVIRONMENT: production
+            RABBITMQ_DEFAULT_USER: watson
+            RABBITMQ_DEFAULT_PASS: clue
+            RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit heartbeat 60"
+        networks:
+            watson_api:
+                aliases:
+                    - rabbitmq.watson_api
+    celery:
+        image: watson_api_celery
+        build:
+            context: .
+            dockerfile: Dockerfile_celery
+        environment:
+            C_FORCE_ROOT: 'true'
+            RABBITMQ_USER: watson
+            RABBITMQ_PASS: clue
+        # healthcheck:
+        #     test: celery inspect ping -A watson -d celery@$HOSTNAME
+        #     interval: 30s
+        #     timeout: 5s
+        #     retries: 2
+        networks:
+            watson_api:
+                aliases:
+                    - celery.watson_api
+        secrets:
+            - fernet_key
+networks:
+    watson_api:
+        external: true
+    frontend:
+        external: true
+# volumes:
+#     watson_api_storage:
+secrets:
+  fernet_key:
+    file: secrets/cred.txt
