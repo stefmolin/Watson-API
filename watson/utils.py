@@ -43,12 +43,14 @@ def query_vertica(query):
     try:
         results = engine.execute(query).fetchall()
         results = [dict(row) for row in results]
-        # convert dates to datetime to avoid MongoDB error from dates without times
+        # convert dates to datetime to avoid MongoDB error from dates without times; also handle Decimal
         for row in results:
             for key, value in row.items():
                 if isinstance(value, datetime.date):
-                    # row[key] = datetime.datetime.combine(value, datetime.time.min) # use this to record dates as datetimes
-                    row[key] = str(value) # record dates as strings in format 'YYYY-MM-DD' ('%Y-%m-%d')
+                    # row[key] = datetime.datetime.combine(value, datetime.time.min)
+                    row[key] = str(value)
+                if isinstance(value, decimal.Decimal):
+                    row[key] = float(value)
     except ProgrammingError as e:
         results = {'error' : e.orig.__str__(),
                    'message' : 'The query you provided is invalid. Try running it against the database yourself to see the error.'}

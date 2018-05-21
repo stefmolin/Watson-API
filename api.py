@@ -44,6 +44,9 @@ def run_query_in_background():
     else:
         # the query will run without filling in parameters so ID will just be the query name (added later)
         id_elements = []
+    logger.info('[USAGE STATS] The {query_name} resource is being requested for {params}'\
+                .format(query_name=sql_query_file[:-4],
+                        params=[str(key) + ': ' + str(value) for key, value in query_parameters.items()]))
     id_elements.append(sql_query_file)
     result_id = utils.generate_uuid(id_elements)
 
