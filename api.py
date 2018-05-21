@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, Response, Blueprint, url_for
-from flask_api import status
+from flask_api import status # this needs to be installed
 from celery.result import AsyncResult
 from watson.celery import celery
 from watson import tasks, utils
@@ -70,10 +70,10 @@ def run_query_in_background():
         logger.info("Running query with celery, since we don't have the result already")
         current_task = tasks.simple_query.delay(query=sql_query, result_id=result_id)
     return api_response({'request' : sql_query,
-                        'result': url_for('v1.get_results', result_id=result_id, _external=True),
+                        'result': url_for('v1.get_results', result_id=result_id, _external=False),
                         'current_status' : current_task.status if current_task else 'none',
                         'task_id' : current_task.task_id if current_task else 'none',
-                        'check_status' : url_for('v1.check_status', task_id=current_task.task_id, _external=True) if current_task else 'none'},
+                        'check_status' : url_for('v1.check_status', task_id=current_task.task_id, _external=False) if current_task else 'none'},
                         status.HTTP_202_ACCEPTED)
 
 # create endpoints for all the queries
@@ -136,4 +136,4 @@ def healthcheck():
     return '', status.HTTP_200_OK
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=80)

@@ -11,7 +11,9 @@ RUN pip install --no-cache-dir \
     sqlalchemy==1.1.13 \
     sqlalchemy_vertica==0.2.5 \
     vertica_python==0.7.3 \
-    psycopg2==2.7.4
+    psycopg2==2.7.4 \
+    PyYAML==3.12 \
+    cryptography==2.1.4
 RUN pip3 install --no-cache-dir \
     uwsgi==2.0.17
 WORKDIR /usr/src/app

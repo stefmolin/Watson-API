@@ -2,13 +2,15 @@ from __future__ import absolute_import, unicode_literals
 from pymongo import MongoClient
 from watson import utils
 from watson.celery import celery
+import yaml
 
 import logging
 FORMAT = '[%(levelname)s] [ %(name)s ] %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 logger = logging.getLogger('Celery')
 
-client = MongoClient('storage.watson_api', 27017)
+mongo_db = yaml.load(open('config.yml'))['mongo']
+client = MongoClient(mongo_db, 27017)
 db = client.data
 collection = db.results
 

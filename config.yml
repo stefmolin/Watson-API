@@ -1,0 +1,15 @@
+database:
+    user: 's.molin'
+    key_path: '/run/secrets/fernet_key'
+    ## To update token:
+    #from cryptography.fernet import Fernet
+    #import yaml
+    #key = open(key_path, 'rb').read() or key = Fernet.generate_key() if no key yet
+    #f = Fernet(key)
+    #token = f.encrypt(b"password_here")
+    #token = yaml.dump(token)
+    #print(token)
+    token: !!binary "Z0FBQUFBQmFfdzQ4UzNFNmo0cjVyb3d1TnA5MDQwcUlCclNKbHpyNkpueEpSbTlJbDFLYzFPdmtu WXphbEU2dHdZOFJVTWs1bFZYN1FWY0Zyb1VGdFdsVjZOd2pKODdJWEE9PQ=="
+    uri: 'vertica+vertica_python://{user}:{password}@[HOSTNAME]:[PORT]/[DB]?ConnectionLoadBalance=true'
+message_queue: rabbitmq.watson-api
+mongo: storage.watson-api

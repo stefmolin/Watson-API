@@ -3,8 +3,19 @@ from os.path import join
 import uuid
 import datetime
 import decimal
+import yaml
+from cryptography.fernet import Fernet
 from sqlalchemy import create_engine
 from sqlalchemy.exc import ProgrammingError
+
+CONF = yaml.load(open('config.yml'))
+user = CONF['database']['user']
+key = open(CONF['database']['key_path'], 'rb').read()
+f = Fernet(key)
+token = CONF['database']['token']
+password = f.decrypt(token).decode('utf8')
+uri = CONF['database']['uri']
+db_uri = uri.format(user=user, password=password)
 
 def generate_uuid(elements):
     unique_id = uuid.UUID('00000000-0000-0000-0000-000000000000')
@@ -34,11 +45,7 @@ def get_query_files(dir):
         level += 1
     return file_paths
 
-def query_vertica(query):
-    with open('/run/secrets/fernet_key', 'r') as file:
-        password = file.read().split("\n")[0]
-    db_uri = 'vertica+vertica_python://{username}:{password}@[HOSTNAME]:[PORT]/[DB]?ConnectionLoadBalance=true'\
-             .format(username='s.molin', password=password)
+def query_vertica(query, db_uri=db_uri):
     engine = create_engine(db_uri, echo=False)
     try:
         results = engine.execute(query).fetchall()

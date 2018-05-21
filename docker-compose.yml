@@ -19,7 +19,7 @@ services:
             watson_api:
             frontend:
                 aliases:
-                    - api.watson_api
+                    - api.watson-api
         secrets:
             - fernet_key
     storage:
@@ -29,7 +29,7 @@ services:
         networks:
             watson_api:
                 aliases:
-                    - storage.watson_api
+                    - storage.watson-api
         # volumes:
             # - watson_api_storage:/data/db
     rabbitmq:
@@ -44,7 +44,7 @@ services:
         networks:
             watson_api:
                 aliases:
-                    - rabbitmq.watson_api
+                    - rabbitmq.watson-api
     celery:
         image: watson_api_celery
         build:
@@ -62,7 +62,7 @@ services:
         networks:
             watson_api:
                 aliases:
-                    - celery.watson_api
+                    - celery.watson-api
         secrets:
             - fernet_key
 networks:
@@ -74,4 +74,4 @@ networks:
 #     watson_api_storage:
 secrets:
   fernet_key:
-    file: secrets/cred.txt
+    file: secrets/fernet_key
