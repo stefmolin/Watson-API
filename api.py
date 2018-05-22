@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, Response, Blueprint, url_for
-from flask_api import status # this needs to be installed
+from flask_api import status
 from celery.result import AsyncResult
 from watson.celery import celery
 from watson import tasks, utils
