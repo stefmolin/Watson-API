@@ -8,7 +8,7 @@ rabbit_mq_user = os.environ['RABBITMQ_USER']
 rabbit_mq_pass = os.environ['RABBITMQ_PASS']
 
 celery = Celery('watson',
-                broker='pyamqp://{username}:{password}@{mq}//?heartbeat=30'\
+                broker='pyamqp://{username}:{password}@{mq}//'\
                         .format(username=rabbit_mq_user,
                                 password=rabbit_mq_pass,
                                 mq=rabbit_mq),
